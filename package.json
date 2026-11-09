@@ -1,0 +1,58 @@
+{
+  "name": "opencode-session-explorer",
+  "version": "0.1.0",
+  "description": "Browse, search, export and report on your OpenCode session history. Local, read-only, bilingual UI.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "williamwang2013",
+    "email": "2614406@qq.com"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "session",
+    "history",
+    "search",
+    "export",
+    "report",
+    "weekly-report"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/williamwang2013/opencode-session-explorer.git"
+  },
+  "homepage": "https://github.com/williamwang2013/opencode-session-explorer#readme",
+  "bugs": {
+    "url": "https://github.com/williamwang2013/opencode-session-explorer/issues"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "!src/py/__pycache__",
+    "!**/*.pyc",
+    "bin",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "opencode-session-explorer": "bin/cli.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "scripts": {
+    "start": "node ./bin/cli.mjs",
+    "check": "node ./scripts/check.mjs",
+    "prepublishOnly": "node ./scripts/prepublish.mjs"
+  }
+}

@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="ui.app_title">OpenCode Session Explorer</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --panel2:#f0f2f5; --line:#e3e6ea; --line2:#eef0f3;
+  --fg:#1f2430; --dim:#6b7280; --dim2:#9aa3ad; --accent:#2563eb; --accent-bg:#e8f0fe;
+  --user:#1d4ed8; --user-line:#c7d9fb; --tool:#a1651a; --reason:#6d4bb5;
+  --mark:#ffe680; --markfg:#241a00; --cur:#ff9a3d; --warn:#b45309;
+  --ok:#0f7b4f; --err:#b42318; --shadow:0 1px 2px rgba(16,24,40,.05);
+}
+[data-theme="dark"]{
+  --bg:#111417; --panel:#171b1f; --panel2:#1d2228; --line:#2a3138; --line2:#232a31;
+  --fg:#dfe6ee; --dim:#8fa0b0; --dim2:#6b7a89; --accent:#4aa8ff; --accent-bg:#1b2836;
+  --user:#7fc1ff; --user-line:#33506b; --tool:#c9a24a; --reason:#9d7fd4;
+  --mark:#ffd54a; --markfg:#1a1a1a; --cur:#ff8b3d; --warn:#e0a34a;
+  --ok:#3ecf8e; --err:#f97066; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:13.5px/1.6 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;display:grid;grid-template-columns:352px 1fr;overflow:hidden}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg)}
+.pad{padding:10px 12px}
+.col{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+.wrap{flex-wrap:wrap}
+h1{font-size:14.5px;margin:0;font-weight:600;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h2{font-size:14px;margin:0 0 8px;font-weight:600}
+.sub{color:var(--dim);font-size:12px}
+.tiny{font-size:11.5px;color:var(--dim2)}
+input,select,button,textarea{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:var(--panel)}
+button{cursor:pointer;transition:border-color .12s,background .12s}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.06)}
+button.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.filters .full{grid-column:1/-1}
+label.small{font-size:11.5px;color:var(--dim);display:flex;flex-direction:column;gap:3px}
+label.inline{flex-direction:row;align-items:center;gap:5px}
+.list{overflow:auto;flex:1;min-height:0;border-top:1px solid var(--line)}
+.item{padding:8px 12px;border-bottom:1px solid var(--line2);cursor:pointer}
+.item:hover{background:var(--panel2)}
+.item.active{background:var(--accent-bg);box-shadow:inset 3px 0 0 var(--accent)}
+.item.child{padding-left:26px}
+.item.child .t::before{content:"└ ";color:var(--dim2)}
+.item .t{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .m{display:flex;gap:8px;color:var(--dim);font-size:11.5px;margin-top:2px;flex-wrap:wrap}
+.item .d{color:var(--dim2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-tag{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;font-size:10px;font-weight:600;
+  vertical-align:1px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);letter-spacing:.3px}
+.tabs{display:flex;gap:2px;padding:6px 12px 0;background:var(--panel);border-bottom:1px solid var(--line);align-items:center}
+.tab{padding:6px 14px;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;color:var(--dim);font-size:13px;background:none}
+.tab:hover{color:var(--fg)}
+.tab.on{background:var(--bg);border-color:var(--line);color:var(--accent);font-weight:600;margin-bottom:-1px}
+.pane{display:none;flex:1;min-height:0;flex-direction:column}
+.pane.on{display:flex}
+header.hd{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex:0 0 auto;max-height:30vh;overflow:auto}
+.title{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{display:flex;gap:6px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.count{color:var(--dim);font-size:11.5px;white-space:nowrap}
+.scroll{overflow:auto;padding:12px;flex:1;min-height:0}
+.msg{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--panel);box-shadow:var(--shadow)}
+.msg.user{border-color:var(--user-line)}
+.msg.flash{outline:2px solid var(--cur);outline-offset:1px}
+.msg .mh{display:flex;gap:9px;align-items:center;padding:5px 10px;border-bottom:1px solid var(--line2);font-size:11.5px;color:var(--dim);flex-wrap:wrap}
+.msg .mh .role{font-weight:700;color:var(--fg)}
+.msg.user .mh .role{color:var(--user)}
+.msg .body{padding:9px 11px;display:flex;flex-direction:column;gap:7px}
+.md{overflow-wrap:anywhere}
+.md pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px;overflow:auto;max-height:460px}
+.md code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 3px;font-family:Consolas,"Cascadia Mono",monospace;font-size:12px}
+.md pre code{border:0;padding:0;background:none}
+.md h3{margin:6px 0;font-size:14px}
+.md blockquote{border-left:3px solid var(--line);margin:0;padding-left:9px;color:var(--dim)}
+.md ul,.md ol{margin:4px 0;padding-left:20px}
+.md a{color:var(--accent)}
+details{border:1px dashed var(--line);border-radius:6px;padding:3px 8px;background:var(--panel2)}
+details>summary{cursor:pointer;color:var(--dim);font-size:12px}
+details.tool>summary{color:var(--tool)}
+details.reasoning>summary{color:var(--reason)}
+.marker{color:var(--dim);font-size:11.5px;border-left:3px solid var(--line);padding-left:7px}
+mark{background:var(--mark);color:var(--markfg);padding:0 1px;border-radius:2px}
+mark.current{background:var(--cur);color:#140b02}
+.empty{color:var(--dim);padding:26px;text-align:center}
+.pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 7px;font-size:11px;color:var(--dim);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:var(--ok)}
+.pill.warn{color:var(--warn);border-color:var(--warn)}
+.att img{max-width:min(100%,560px);max-height:340px;border:1px solid var(--line);border-radius:6px;cursor:zoom-in;display:block}
+.att .cap{font-size:11.5px;color:var(--dim);margin-top:3px}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;min-width:118px}
+.card b{display:block;font-size:18px;font-weight:600}
+.card span{color:var(--dim);font-size:11.5px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;color:var(--dim);font-weight:600;font-size:11.5px;padding:5px 8px;border-bottom:1px solid var(--line)}
+td{padding:5px 8px;border-bottom:1px solid var(--line2)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.bars{display:flex;flex-direction:column;gap:3px}
+.bar-row{display:grid;grid-template-columns:88px 1fr 150px;gap:8px;align-items:center;font-size:12px}
+.bar-track{background:var(--panel2);border-radius:3px;height:16px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);opacity:.72;border-radius:3px}
+.bar-val{color:var(--dim);font-size:11.5px;text-align:right;white-space:nowrap}
+.days{display:flex;gap:4px;flex-wrap:wrap}
+.day{padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;cursor:pointer;background:var(--panel2);color:var(--dim);white-space:nowrap}
+.day:hover{border-color:var(--accent);color:var(--accent)}
+.day.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.hit{border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;background:var(--panel);cursor:pointer;box-shadow:var(--shadow)}
+.hit:hover{border-color:var(--accent)}
+.hit .hm{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);margin-bottom:3px}
+.hit .sn{font-size:12.5px;overflow-wrap:anywhere}
+#modal{position:absolute;inset:0;background:rgba(15,20,26,.5);display:none;align-items:center;justify-content:center;padding:28px;z-index:50}
+#modal.on{display:flex}
+#modal .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;max-width:min(1100px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+#modal .mh{padding:9px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+#modal .mc{overflow:auto;padding:12px}
+#modal pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 Consolas,"Cascadia Mono",monospace}
+#modal img{max-width:100%;max-height:80vh;display:block}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:11.5px;color:var(--dim)}
+</style>
+</head>
+<body>
+<aside>
+  <div class="pad col">
+    <div class="row"><h1 class="grow" data-i18n="ui.app_title">opencode</h1></div>
+    <div class="row">
+      <button id="lang" data-i18n-title="ui.language">中文</button>
+      <button id="theme" data-i18n-title="ui.theme_toggle" data-i18n="ui.theme_dark">Dark</button>
+      <button id="logout" data-i18n-title="ui.logout_title" data-i18n="ui.logout" style="display:none">Sign out</button>
+      <button id="refresh" data-i18n-title="ui.refresh_title" data-i18n="ui.refresh">Refresh</button>
+    </div>
+    <input id="sq" data-i18n-ph="ui.search_sessions_ph" placeholder="Search…">
+    <div class="filters">
+      <label class="small"><span data-i18n="ui.from">From</span><input type="date" id="sfrom"></label>
+      <label class="small"><span data-i18n="ui.to">To</span><input type="date" id="sto"></label>
+      <label class="small"><span data-i18n="ui.sort">Sort</span><select id="ssort"><option value="desc" data-i18n="ui.sort_newest">Newest first</option><option value="asc" data-i18n="ui.sort_oldest">Oldest first</option></select></label>
+      <label class="small"><span data-i18n="ui.scope">Scope</span><select id="smain"><option value="0" data-i18n="ui.scope_all">All sessions</option><option value="1" data-i18n="ui.scope_main">Main sessions only</option></select></label>
+      <label class="small full"><span data-i18n="ui.directory">Directory</span><select id="sdir"><option value="" data-i18n="ui.all_dirs">All directories</option></select></label>
+    </div>
+    <div class="row"><span class="sub grow" id="scount"></span><button id="clear" data-i18n="ui.clear">Clear</button></div>
+    <div class="tiny" id="idxinfo"></div>
+  </div>
+  <div class="list" id="list"></div>
+</aside>
+
+<main>
+  <div class="tabs">
+    <div class="tab on" data-pane="transcript" data-i18n="ui.tab_transcript">Transcript</div>
+    <div class="tab" data-pane="info" data-i18n="ui.tab_info">Session info</div>
+    <div class="tab" data-pane="search" data-i18n="ui.tab_search">Search</div>
+    <div class="tab" data-pane="stats" data-i18n="ui.tab_stats">Stats</div>
+    <div class="tab" data-pane="export" data-i18n="ui.tab_export">Export</div>
+    <span class="grow"></span>
+    <span class="tiny" id="hint"></span>
+  </div>
+
+  <section class="pane on" id="pane-transcript">
+    <header class="hd" id="header"><div class="title" data-i18n="ui.select_session">Select a session</div><div class="sub" data-i18n="ui.select_session_hint">Pick a session on the left.</div></header>
+    <div class="bar">
+      <button id="ord" data-i18n-title="ui.order_title" data-i18n="ui.newest_top">Newest on top</button>
+      <button id="askonly" data-i18n-title="ui.ask_only_title" data-i18n="ui.ask_only">Questions only</button>
+      <button id="exp" data-i18n-title="ui.expand_all_title" data-i18n="ui.expand_all">Expand all</button>
+      <span class="grow"></span>
+      <input id="fq" style="width:210px" data-i18n-ph="ui.find_in_page_ph" placeholder="Highlight…">
+      <span class="count" id="fcount"></span>
+      <button id="fprev" data-i18n="ui.prev">Previous</button>
+      <button id="fnext" data-i18n="ui.next">Next</button>
+    </div>
+    <div class="bar" id="daybar" style="display:none"></div>
+    <div class="scroll" id="transcript"><div class="empty" data-i18n="ui.no_session_loaded">No session loaded</div></div>
+    <div class="bar" style="border-top:1px solid var(--line);border-bottom:none;justify-content:center">
+      <span class="count" id="loaded"></span>
+      <button id="more" style="display:none" data-i18n="ui.load_earlier">Load earlier</button>
+      <span id="spinbox"></span>
+    </div>
+  </section>
+
+  <section class="pane" id="pane-info">
+    <div class="bar">
+      <span class="tiny" id="iinfo" data-i18n="ui.info_idle">Open a session to see its full details</span>
+      <span class="grow"></span>
+      <button id="irefresh" data-i18n="ui.refresh">Refresh</button>
+    </div>
+    <div class="scroll" id="info"><div class="empty" data-i18n="ui.no_session_open">No session open</div></div>
+  </section>
+
+  <section class="pane" id="pane-search">
+    <div class="bar">
+      <input id="gq" class="grow" data-i18n-ph="ui.search_all_ph" placeholder="Search…">
+      <button id="gsearch" class="primary" data-i18n="ui.search">Search</button>
+    </div>
+    <div class="bar">
+      <label class="small inline"><input type="checkbox" id="gcur"> <span data-i18n="ui.only_current">Current session only</span></label>
+      <label class="small inline"><input type="checkbox" id="gtool" checked> <span data-i18n="ui.tool_output">Tool output</span></label>
+      <label class="small inline"><input type="checkbox" id="gthink" checked> <span data-i18n="ui.reasoning">Reasoning</span></label>
+      <label class="small inline"><input type="checkbox" id="gfile" checked> <span data-i18n="ui.attachments">Attachments</span></label>
+      <label class="small inline"><input type="checkbox" id="guser"> <span data-i18n="ui.only_questions">Questions only</span></label>
+      <span class="grow"></span>
+      <select id="glimit"><option value="40">40</option><option value="80" selected>80</option><option value="200">200</option></select>
+    </div>
+    <div class="scroll" id="gres"><div class="empty" data-i18n="ui.search_hint">Type a keyword to start searching</div></div>
+  </section>
+
+  <section class="pane" id="pane-stats">
+    <div class="bar">
+      <label class="small"><span data-i18n="ui.from">From</span><input type="date" id="tfrom"></label>
+      <label class="small"><span data-i18n="ui.to">To</span><input type="date" id="tto"></label>
+      <button id="tapply" class="primary" data-i18n="ui.stats">Run stats</button>
+      <button id="tall" data-i18n="ui.all_time">All time</button>
+      <span class="grow"></span>
+      <span class="tiny" id="tinfo"></span>
+    </div>
+    <div class="scroll" id="stats"><div class="empty" data-i18n="ui.click_stats">Click "Stats"</div></div>
+  </section>
+
+  <section class="pane" id="pane-export">
+    <div class="bar">
+      <select id="escope"><option value="cur" data-i18n="ui.scope_current">Current session</option><option value="all" data-i18n="ui.scope_all">All sessions</option></select>
+      <label class="small"><span data-i18n="ui.from">From</span><input type="date" id="efrom"></label>
+      <label class="small"><span data-i18n="ui.to">To</span><input type="date" id="eto"></label>
+      <select id="efmt">
+        <option value="md" data-i18n="ui.format_md">Markdown</option>
+        <option value="txt" data-i18n="ui.format_txt">Plain text</option>
+        <option value="json">JSON</option>
+        <option value="report" data-i18n="ui.format_report">Work report</option>
+      </select>
+      <label class="small inline"><input type="checkbox" id="etool" checked> <span data-i18n="ui.include_tool">Include tool output</span></label>
+      <label class="small inline"><input type="checkbox" id="ethink" checked> <span data-i18n="ui.include_reasoning">Include reasoning</span></label>
+      <button id="edo" class="primary" data-i18n="ui.export_download">Export / download</button>
+      <span class="grow"></span>
+      <span class="tiny" id="einfo"></span>
+    </div>
+    <div class="scroll"><div class="panel">
+      <h2 data-i18n="ui.export_notes_title">Notes</h2>
+      <div class="sub" id="enotes" data-i18n-html="ui.export_notes"></div>
+      <div class="sub" id="ewarn"></div>
+    </div></div>
+  </section>
+</main>
+
+<div id="modal"><div class="box">
+  <div class="mh"><b class="grow" id="mtitle"></b><button id="mclose" data-i18n="ui.close">Close</button></div>
+  <div class="mc" id="mbody"></div>
+</div></div>
+
+<script>
+const S = window.SE_I18N || { t: k => k, lang: "en", apply: () => {} };
+const t = S.t;
+const LOCALE = S.lang === "zh" ? "zh-CN" : "en-US";
+S.apply(document);
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtTime = t0 => t0 ? new Date(t0).toLocaleString(LOCALE,{hour12:false}) : "";
+const fmtDay = t0 => t0 ? new Date(t0).toLocaleDateString(LOCALE) : "";
+const fmtCost = c => c ? "$" + Number(c).toFixed(2) : "";
+const fmtNum = n => (n||0).toLocaleString(LOCALE);
+const fmtSize = b => b>=1048576 ? (b/1048576).toFixed(1)+"MB" : (b/1024).toFixed(1)+"KB";
+const d2ms = (v, end) => v ? new Date(v + (end?"T23:59:59":"T00:00:00")).getTime() : 0;
+const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(()=>fn(...a), ms); }; };
+
+/* 解释器/界面语言切换：改写 ?lang 并保留当前会话后整页重载，避免残留旧语言文本 */
+$("#lang").textContent = LOCALE === "en-US" ? "中文" : "EN";
+$("#lang").onclick = () => {
+  const p = new URLSearchParams(location.search);
+  p.set("lang", S.lang === "zh" ? "en" : "zh");
+  if (state.sid) p.set("id", state.sid);
+  location.search = p.toString();
+};
+
+const state = {
+  sessions:[], dirs:[], sid:null, meta:null, counts:null,
+  msgs:[], cursor:null, hasMore:false, loading:false,
+  order:"desc", askOnly:false, expanded:false, q:"", marks:[], mi:-1, anchorPart:null
+};
+
+async function api(path){
+  const r = await fetch(path);
+  if (r.status === 401){ location.href = "/login"; throw new Error(t("ui.unauthorized")); }
+  if (!r.ok){
+    let msg = "HTTP " + r.status;
+    try { const j = await r.json(); if (j.error) msg = j.error; } catch(e){}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+function md(src){
+  const lines = String(src).split(/\r?\n/);
+  let out = "", inCode = false, list = null;
+  const inline = s => s
+    .replace(/`([^`]+)`/g, (m,a)=>"<code>"+a+"</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  for (const raw of lines){
+    const line = esc(raw);
+    if (/^\s*```/.test(raw)){ out += inCode ? "</code></pre>" : "<pre><code>"; inCode = !inCode; continue; }
+    if (inCode){ out += line + "\n"; continue; }
+    let m;
+    if (m = line.match(/^(#{1,6})\s+(.*)$/)){ out += "<h3>"+m[2]+"</h3>"; continue; }
+    if (m = line.match(/^\s*[-*]\s+(.*)$/)){ if(list!=="ul"){ if(list) out+="</"+list+">"; out+="<ul>"; list="ul"; } out += "<li>"+inline(m[1])+"</li>"; continue; }
+    if (m = line.match(/^\s*\d+[.)]\s+(.*)$/)){ if(list!=="ol"){ if(list) out+="</"+list+">"; out+="<ol>"; list="ol"; } out += "<li>"+inline(m[1])+"</li>"; continue; }
+    if (list){ out += "</"+list+">"; list = null; }
+    if (m = line.match(/^\s*>\s?(.*)$/)){ out += "<blockquote>"+inline(m[1])+"</blockquote>"; continue; }
+    out += inline(line) + "<br>";
+  }
+  if (list) out += "</"+list+">";
+  if (inCode) out += "</code></pre>";
+  return out;
+}
+
+/* ---------- 会话列表 ---------- */
+async function loadSessions(){
+  const p = new URLSearchParams();
+  p.set("q", $("#sq").value.trim());
+  p.set("sort", $("#ssort").value);
+  p.set("main", $("#smain").value);
+  p.set("dir", $("#sdir").value);
+  const f = $("#sfrom").value, to = $("#sto").value;
+  if (f) p.set("from", d2ms(f));
+  if (to) p.set("to", d2ms(to, true));
+  try{
+    const j = await api("/api/sessions?"+p.toString());
+    state.sessions = j.sessions; state.dirs = j.dirs || [];
+    renderDirs(); renderList();
+    $("#scount").textContent = t("ui.sessions_count", { n: j.sessions.length });
+  }catch(e){ $("#list").innerHTML = '<div class="empty">'+esc(t("ui.load_failed", { msg: e.message }))+"</div>"; }
+}
+
+function renderDirs(){
+  const sel = $("#sdir"), cur = sel.value;
+  sel.innerHTML = '<option value="">'+esc(t("ui.all_dirs"))+'</option>' + state.dirs.map(d =>
+    '<option value="'+esc(d.directory)+'">'+esc(shortDir(d.directory))+" ("+d.count+")</option>").join("");
+  sel.value = cur;
+}
+function shortDir(p){
+  if (!p) return "-";
+  const parts = p.replace(/\\/g,"/").split("/").filter(Boolean);
+  return parts.slice(-2).join("/");
+}
+
+function renderList(){
+  const el = $("#list");
+  if (!state.sessions.length){ el.innerHTML = '<div class="empty">'+esc(t("ui.no_sessions"))+"</div>"; return; }
+  el.innerHTML = state.sessions.map(s =>
+    '<div class="item'+(s.id===state.sid?" active":"")+(s.parent_id?" child":"")+'" data-id="'+s.id+'">'+
+      '<div class="t">'+esc(s.title||t("ui.untitled"))+srcTag(s)+"</div>"+
+      '<div class="m"><span>'+fmtTime(s.time_created)+"</span>"+
+        (s.cost?'<span>'+fmtCost(s.cost)+"</span>":"")+
+        '<span>'+t("ui.messages_count", { n: fmtNum(s.msgs) })+"</span></div>"+
+      '<div class="d">'+esc(shortDir(s.directory))+(s.model?" · "+esc(s.model):"")+"</div>"+
+    "</div>").join("");
+  el.querySelectorAll(".item").forEach(it => it.onclick = () => openSession(it.dataset.id));
+}
+
+/* 存储版本标记：v1=旧表(1.18.x) v2=新表(2.0.x) */
+function srcTag(s){
+  if (s.source !== "v1") return "";
+  return '<span class="src-tag" title="'+esc(t("ui.v1_tag_title"))+'">V1</span>';
+}
+
+/* ---------- 打开会话 ---------- */
+async function openSession(id, aroundTime, focusPart){
+  state.sid = id; state.anchorPart = focusPart || null;
+  state.msgs = []; state.cursor = null; state.hasMore = false; state.marks = []; state.mi = -1;
+  renderList();
+  $("#transcript").innerHTML = '<div class="empty"><span class="spin"></span> '+esc(t("ui.loading_session"))+"</div>";
+  $("#header").innerHTML = '<div class="title">'+esc(t("ui.loading"))+"</div>";
+  try{
+    const j = await api("/api/session?id="+encodeURIComponent(id));
+    state.meta = j.session; state.counts = j.counts;
+    renderHeader();
+    renderInfo();
+    await loadMore(true, aroundTime);
+    if (state.anchorPart) focusPartById(state.anchorPart);
+  }catch(e){
+    $("#transcript").innerHTML = '<div class="empty">'+esc(t("ui.load_failed", { msg: e.message }))+"</div>";
+  }
+}
+
+function renderHeader(){
+  const s = state.meta, c = state.counts || {};
+  const kinds = c.by_kind || {};
+  const roles = c.by_role || {};
+  const bits = [
+    esc(s.id), esc(s.directory||""), esc(s.model||""),
+    fmtTime(s.time_created)+" → "+fmtTime(s.time_updated)
+  ];
+  if (s.cost) bits.push(fmtCost(s.cost));
+  if (s.storage === "v2") bits.push(t("ui.storage_v2"));
+  else if (s.storage === "v1") bits.push(t("ui.storage_v1"));
+  bits.push(t("ui.messages_n", { n: fmtNum(c.messages) }));
+  if (s.storage !== "v2") bits.push(t("ui.parts_n", { n: fmtNum(c.parts) }));
+  bits.push(t("ui.prompts_replies", { u: fmtNum(roles.user||0), a: fmtNum(roles.assistant||0) }));
+  const kindBits = [];
+  if (kinds.text) kindBits.push(t("ui.kind_text")+" "+kinds.text);
+  if (kinds.reasoning) kindBits.push(t("ui.kind_reasoning")+" "+kinds.reasoning);
+  if (kinds.tool) kindBits.push(t("ui.kind_tool")+" "+kinds.tool);
+  if (kinds.file) kindBits.push(t("ui.kind_file")+" "+kinds.file);
+
+  let nav = "";
+  if (s.parent_id) nav += '<button data-open="'+s.parent_id+'">'+esc(t("ui.back_to_parent", { title: s.parent_title||s.parent_id }))+"</button>";
+  const kids = s.children || [];
+  const todos = s.todos || [];
+  if (kids.length) nav += '<button data-pane-jump="info">'+esc(t("ui.view_info_children", { n: kids.length }))+"</button>";
+  else if (todos.length) nav += '<button data-pane-jump="info">'+esc(t("ui.view_info_todos", { n: todos.length }))+"</button>";
+
+  $("#header").innerHTML =
+    '<div class="title">'+esc(s.title||t("ui.untitled"))+"</div>"+
+    '<div class="sub">'+bits.join(" · ")+"</div>"+
+    (kindBits.length?'<div class="tiny">'+kindBits.join(" · ")+"</div>":"")+
+    (nav?'<div class="row wrap" style="margin-top:7px">'+nav+"</div>":"");
+  $("#header").querySelectorAll("button[data-open]").forEach(b => b.onclick = () => openSession(b.dataset.open));
+  $("#header").querySelectorAll("button[data-pane-jump]").forEach(b => b.onclick = () => switchPane(b.dataset.paneJump));
+
+  const db = $("#daybar");
+  if ((s.days||[]).length > 1){
+    db.style.display = "flex";
+    db.innerHTML = '<span class="tiny">'+esc(t("ui.jump_to"))+'</span>' + s.days.map(d =>
+      '<span class="day" data-t="'+d.t1+'">'+d.d.slice(5)+" ("+d.msgs+")</span>").join("");
+    db.querySelectorAll(".day").forEach(el => el.onclick = () => {
+      db.querySelectorAll(".day").forEach(x => x.classList.remove("on"));
+      el.classList.add("on");
+      jumpTo(+el.dataset.t);
+    });
+  } else { db.style.display = "none"; }
+}
+
+/* ---------- 会话信息面板 ---------- */
+function renderInfo(){
+  const box = $("#info");
+  const s = state.meta;
+  if (!s){ box.innerHTML = '<div class="empty">'+esc(t("ui.no_session_open"))+"</div>"; return; }
+  const c = state.counts || {};
+  const kids = s.children || [];
+  const cs = s.children_summary || {};
+  const todos = s.todos || [];
+  const roles = c.by_role || {};
+  const kinds = c.by_kind || {};
+  const tok = k => fmtNum(s[k] || 0);
+
+  const kv = rows => '<table><tbody>' + rows.filter(r => r[1] !== "" && r[1] != null)
+    .map(r => "<tr><th style='width:150px'>"+esc(r[0])+"</th><td>"+r[1]+"</td></tr>").join("") + "</tbody></table>";
+
+  let html = "";
+
+  html += '<div class="cards">'+
+    card(fmtNum(c.messages), t("ui.card_messages"))+card(fmtNum(c.parts), t("ui.card_parts"))+
+    card(fmtCost(s.cost)||"$0.00", t("ui.card_cost"))+
+    (kids.length ? card(fmtCost(cs.cost)||"$0.00", t("ui.card_child_cost"))+card(fmtCost((s.cost||0)+(cs.cost||0))||"$0.00", t("ui.card_total_cost")) : "")+
+    "</div>";
+
+  html += '<div class="panel"><h2>'+esc(t("ui.basic_info"))+'</h2>'+kv([
+    [t("ui.title"), esc(s.title||t("ui.untitled"))],
+    [t("ui.session_id"), '<span class="mono">'+esc(s.id)+"</span>"],
+    [t("ui.workdir"), '<span class="mono">'+esc(s.directory||"")+"</span>"],
+    [t("ui.model"), esc(s.model||"")],
+    [t("ui.agent"), esc(s.agent||"")],
+    [t("ui.opencode_version"), esc(s.version||"")],
+    [t("ui.created"), fmtTime(s.time_created)],
+    [t("ui.last_activity"), fmtTime(s.time_updated)],
+    [t("ui.type"), s.parent_id ? t("ui.child_session") : t("ui.main_session")],
+    [t("ui.parent"), s.parent_id ? '<button data-open="'+s.parent_id+'">'+esc(s.parent_title||s.parent_id)+"</button>" : ""],
+  ])+"</div>";
+
+  html += '<div class="panel"><h2>'+esc(t("ui.composition"))+'</h2>'+kv([
+    [t("ui.messages"), t("ui.prompts_replies", { u: fmtNum(roles.user||0), a: fmtNum(roles.assistant||0) })],
+    [t("ui.card_parts"), ["text","reasoning","tool","file","marker"]
+      .filter(k => kinds[k]).map(k => t("ui.kind_"+k)+" "+fmtNum(kinds[k])).join(" · ")],
+    [t("ui.token_input"), tok("tokens_input")],
+    [t("ui.token_output"), tok("tokens_output")],
+    [t("ui.token_reasoning"), tok("tokens_reasoning")],
+    [t("ui.cache_read"), tok("tokens_cache_read")],
+    [t("ui.cache_write"), tok("tokens_cache_write")],
+  ])+"</div>";
+
+  if ((s.days||[]).length){
+    const max = Math.max(...s.days.map(d => d.msgs), 1);
+    html += '<div class="panel"><h2>'+esc(t("ui.per_day"))+'</h2><div class="bars">'+s.days.map(d =>
+      '<div class="bar-row"><span class="tiny">'+esc(d.d.slice(5))+"</span>"+
+      '<span class="bar-track"><span class="bar-fill" style="width:'+Math.max(2,(d.msgs/max*100))+'%"></span></span>'+
+      '<span class="bar-val">'+t("ui.messages_count", { n: fmtNum(d.msgs) })+"</span></div>").join("")+"</div></div>";
+  }
+
+  if (kids.length){
+    html += '<div class="panel"><h2>'+esc(t("ui.child_sessions", { n: kids.length }))+'</h2>'+
+      '<div class="sub" style="margin-bottom:8px">'+esc(t("ui.child_sessions_hint"))+'</div>'+
+      "<table><thead><tr><th>"+esc(t("ui.col_title"))+"</th><th>"+esc(t("ui.col_created"))+"</th><th class='n'>"+esc(t("ui.col_messages"))+"</th><th class='n'>"+esc(t("ui.col_parts"))+"</th><th class='n'>"+esc(t("ui.col_cost"))+"</th></tr></thead><tbody>"+
+      kids.map(k => "<tr><td><button data-open=\""+k.id+"\">"+esc(k.title||k.id)+"</button></td>"+
+        "<td class='tiny'>"+fmtTime(k.time_created)+"</td>"+
+        "<td class='n'>"+fmtNum(k.msgs)+"</td><td class='n'>"+fmtNum(k.parts)+"</td>"+
+        "<td class='n'>"+(fmtCost(k.cost)||"$0.00")+"</td></tr>").join("")+
+      "</tbody></table></div>";
+  }
+
+  if (todos.length){
+    const done = todos.filter(x => x.status === "completed").length;
+    html += '<div class="panel"><h2>'+esc(t("ui.todos", { done: done, total: todos.length }))+'</h2>'+
+      '<div class="sub" style="margin-bottom:8px">'+esc(t("ui.todos_hint"))+'</div>'+
+      "<table><thead><tr><th style='width:90px'>"+esc(t("ui.col_status"))+"</th><th style='width:70px'>"+esc(t("ui.col_priority"))+"</th><th>"+esc(t("ui.col_content"))+"</th></tr></thead><tbody>"+
+      todos.map(x => "<tr><td><span class=\"pill"+(x.status==="completed"?" ok":"")+"\">"+esc(x.status)+"</span></td>"+
+        "<td class='tiny'>"+esc(x.priority)+"</td><td>"+esc(x.content)+"</td></tr>").join("")+
+      "</tbody></table></div>";
+  }
+
+  box.innerHTML = html;
+  box.querySelectorAll("button[data-open]").forEach(b => b.onclick = () => {
+    switchPane("transcript");
+    openSession(b.dataset.open);
+  });
+  $("#iinfo").textContent = t("ui.info_title", { title: s.title||s.id });
+}
+
+async function jumpTo(tm){
+  state.msgs = []; state.cursor = null; state.hasMore = false;
+  await loadMore(true, tm);
+}
+
+/* ---------- 分页加载 ---------- */
+async function loadMore(reset, aroundTime){
+  if (state.loading || !state.sid) return;
+  if (!reset && !state.hasMore) return;
+  state.loading = true;
+  $("#spinbox").innerHTML = '<span class="spin"></span>';
+  const p = new URLSearchParams();
+  p.set("session_id", state.sid);
+  p.set("limit", "120");
+  if (state.askOnly) p.set("roles", "user");
+  if (aroundTime) p.set("around_time", String(aroundTime));
+  else if (!reset && state.cursor){ p.set("before_time", String(state.cursor.time)); p.set("before_id", state.cursor.id); }
+  try{
+    const j = await api("/api/parts?"+p.toString());
+    if (reset) state.msgs = j.messages; else state.msgs = state.msgs.concat(j.messages);
+    state.cursor = j.cursor; state.hasMore = j.has_more;
+    renderTranscript(reset);
+  }catch(e){
+    $("#transcript").innerHTML = '<div class="empty">'+esc(t("ui.load_failed", { msg: e.message }))+"</div>";
+  }finally{
+    state.loading = false;
+    $("#spinbox").innerHTML = "";
+    updateFooter();
+  }
+}
+
+function updateFooter(){
+  const total = state.askOnly ? (state.counts.by_role||{}).user||0 : (state.counts||{}).messages||0;
+  const key = state.hasMore ? "ui.loaded" : "ui.loaded_all";
+  $("#loaded").textContent = t(key, { n: state.msgs.length, total: total });
+  $("#more").style.display = state.hasMore ? "" : "none";
+}
+
+function partHtml(p){
+  if (p.t === "text") return '<div class="md">'+md(p.text)+"</div>";
+  if (p.t === "reasoning") return '<details class="reasoning"><summary>'+esc(t("ui.reasoning_summary"))+'</summary><div class="md">'+md(p.text)+"</div></details>";
+  if (p.t === "tool"){
+    const head = t("ui.tool_prefix")+" "+esc(p.tool)+(p.status?" · "+esc(p.status):"")+(p.title?" · "+esc(p.title):"");
+    let inner = "";
+    if (p.input) inner += "<pre>"+esc(JSON.stringify(p.input,null,1))+"</pre>";
+    if (p.output) inner += "<pre>"+esc(p.output)+(p.truncated?esc(t("ui.truncated")):"")+"</pre>";
+    if (p.full) inner += '<div style="margin-top:6px"><button data-full="'+p.id+'">'+esc(t("ui.view_full"))+"</button></div>";
+    return '<details class="tool"><summary>'+head+"</summary>"+inner+"</details>";
+  }
+  if (p.t === "file"){
+    const img = p.inline ? '<img loading="lazy" src="/api/file?part_id='+encodeURIComponent(p.id)+'" data-img="'+p.id+'" alt="'+esc(p.name)+'">' : "";
+    return '<div class="att">'+img+'<div class="cap">'+esc(t("ui.attachment", { name: p.name }))+(p.mime?" · "+esc(p.mime):"")+"</div></div>";
+  }
+  if (p.t === "marker") return '<div class="marker">'+esc(p.label)+"</div>";
+  return "";
+}
+
+function renderTranscript(reset){
+  const box = $("#transcript");
+  const prevH = box.scrollHeight, prevTop = box.scrollTop;
+  const list = state.order === "asc" ? state.msgs.slice().reverse() : state.msgs;
+  box.innerHTML = list.map(m => {
+    const toks = m.tokens || {};
+    const bits = [fmtTime(m.time)];
+    if (m.agent) bits.push(esc(m.agent));
+    if (m.cost) bits.push(fmtCost(m.cost));
+    if (toks.output) bits.push("out "+fmtNum(toks.output));
+    return '<div class="msg '+esc(m.role)+'" data-mid="'+m.id+'">'+
+      '<div class="mh"><span class="role">'+(m.role==="user"?t("ui.role_user"):(m.role==="assistant"?t("ui.role_assistant"):esc(m.role)))+"</span>"+
+      bits.map(b=>"<span>"+b+"</span>").join("")+
+      '<span class="tiny">'+esc(t("ui.parts", { shown: m.parts.length, total: m.part_total }))+'</span></div>'+
+      '<div class="body">'+m.parts.map(partHtml).join("")+"</div></div>";
+  }).join("") || '<div class="empty">'+esc(t("ui.empty_before"))+"</div>";
+
+  if (state.order === "asc" && !reset){
+    box.scrollTop = box.scrollHeight - prevH + prevTop;
+  } else if (reset){
+    box.scrollTop = 0;
+  }
+  if (state.expanded) box.querySelectorAll("details").forEach(d => d.open = true);
+  applySearch(true);
+}
+
+function focusPartById(pid){
+  const host = document.querySelector('.msg [data-full="'+pid+'"]');
+  if (host){
+    const d = host.closest("details"); if (d) d.open = true;
+    const msg = host.closest(".msg");
+    if (msg){ msg.classList.add("flash"); msg.scrollIntoView({block:"center"}); setTimeout(()=>msg.classList.remove("flash"), 2600); }
+  }
+  state.anchorPart = null;
+}
+
+/* ---------- 高亮 ---------- */
+function highlightAll(root, q){
+  const marks = [];
+  if (!q) return marks;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()){
+    const n = walker.currentNode;
+    if (!n.nodeValue || !n.nodeValue.toLowerCase().includes(q.toLowerCase())) continue;
+    nodes.push(n);
+  }
+  for (const n of nodes){
+    const frag = document.createDocumentFragment();
+    const text = n.nodeValue, lower = text.toLowerCase(), lq = q.toLowerCase();
+    let i = 0, k;
+    while ((k = lower.indexOf(lq, i)) >= 0){
+      if (k > i) frag.appendChild(document.createTextNode(text.slice(i, k)));
+      const mk = document.createElement("mark");
+      mk.textContent = text.slice(k, k + q.length);
+      frag.appendChild(mk); marks.push(mk);
+      i = k + q.length;
+    }
+    if (i < text.length) frag.appendChild(document.createTextNode(text.slice(i)));
+    n.parentNode.replaceChild(frag, n);
+  }
+  return marks;
+}
+
+function applySearch(reset){
+  if (reset){ state.marks = []; state.mi = -1; }
+  const q = $("#fq").value.trim();
+  state.q = q;
+  if (!state.meta){ $("#fcount").textContent = ""; return; }
+  state.marks = highlightAll($("#transcript"), q);
+  state.mi = state.marks.length ? 0 : -1;
+  focusMark();
+}
+function focusMark(){
+  state.marks.forEach(m => m.classList.remove("current"));
+  if (!state.marks.length){ $("#fcount").textContent = state.q ? "0" : ""; return; }
+  if (state.mi < 0) state.mi = state.marks.length - 1;
+  if (state.mi >= state.marks.length) state.mi = 0;
+  const m = state.marks[state.mi];
+  m.classList.add("current"); m.scrollIntoView({block:"center"});
+  $("#fcount").textContent = (state.mi+1) + " / " + state.marks.length;
+}
+
+/* ---------- 全局搜索 ---------- */
+async function doSearch(){
+  const q = $("#gq").value.trim();
+  if (!q){ $("#gres").innerHTML = '<div class="empty">'+esc(t("ui.search_hint"))+"</div>"; return; }
+  $("#gres").innerHTML = '<div class="empty"><span class="spin"></span> '+esc(t("ui.searching"))+"</div>";
+  const kinds = ["text"];
+  if ($("#gthink").checked) kinds.push("reasoning");
+  if ($("#gtool").checked) kinds.push("tool");
+  if ($("#gfile").checked) kinds.push("file");
+  const p = new URLSearchParams();
+  p.set("q", q); p.set("limit", $("#glimit").value);
+  p.set("kinds", kinds.join(","));
+  if ($("#guser").checked) p.set("roles", "user");
+  if ($("#gcur").checked && state.sid) p.set("session_id", state.sid);
+  if ($("#sdir").value) p.set("dir", $("#sdir").value);
+  try{
+    const j = await api("/api/search?"+p.toString());
+    $("#einfo").textContent = "";
+    if (!j.hits.length){ $("#gres").innerHTML = '<div class="empty">'+esc(t("ui.no_hits"))+"</div>"; return; }
+    $("#gres").innerHTML =
+      '<div class="sub" style="margin-bottom:8px">'+
+      esc(t("ui.hits_summary", { count: fmtNum(j.count), shown: j.hits.length, indexed: fmtNum(j.index.indexed) }))+"</div>" +
+      j.hits.map(h =>
+        '<div class="hit" data-sid="'+h.session_id+'" data-t="'+h.time+'" data-pid="'+h.part_id+'">'+
+          '<div class="hm"><span class="pill">'+(h.role==="user"?esc(t("ui.role_user")):esc(t("ui.role_assistant")))+"</span>"+
+          '<span class="pill">'+esc(h.kind)+"</span>"+
+          (h.tool?'<span class="pill">'+esc(h.tool)+"</span>":"")+
+          "<span>"+fmtTime(h.time)+"</span><span>"+esc(h.session_title||h.session_id)+"</span>"+
+          '<span class="tiny">'+esc(shortDir(h.directory))+"</span></div>"+
+          '<div class="sn">'+markSnippet(h.snippet, q)+"</div></div>").join("");
+    $("#gres").querySelectorAll(".hit").forEach(el => el.onclick = async () => {
+      switchPane("transcript");
+      await openSession(el.dataset.sid, +el.dataset.t, el.dataset.pid);
+    });
+  }catch(e){ $("#gres").innerHTML = '<div class="empty">'+esc(t("ui.search_failed", { msg: e.message }))+"</div>"; }
+}
+function markSnippet(s, q){
+  const e = esc(s);
+  if (!q) return e;
+  const re = new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")", "gi");
+  return e.replace(re, "<mark>$1</mark>");
+}
+
+/* ---------- 统计 ---------- */
+async function doStats(){
+  const p = new URLSearchParams();
+  const f = $("#tfrom").value, to = $("#tto").value;
+  if (f) p.set("from", d2ms(f)); if (to) p.set("to", d2ms(to, true));
+  $("#stats").innerHTML = '<div class="empty"><span class="spin"></span> '+esc(t("ui.stat_running"))+"</div>";
+  try{
+    const d = await api("/api/stats?"+p.toString());
+    const T = d.totals;
+    let html = '<div class="cards">'+
+      card(T.sessions, t("ui.sessions"))+card(fmtNum(T.messages), t("ui.messages"))+card(fmtNum(T.tokens), "Token")+card("$"+T.cost.toFixed(2), t("ui.cost"))+"</div>";
+    html += '<div class="panel"><h2>'+esc(t("ui.by_day"))+'</h2>'+bars(d.by_day, "messages", x => t("ui.stats_row", { sessions: x.sessions, messages: fmtNum(x.messages), cost: x.cost.toFixed(2) }))+"</div>";
+    html += '<div class="panel"><h2>'+esc(t("ui.by_dir"))+'</h2>'+table(d.by_dir)+"</div>";
+    html += '<div class="panel"><h2>'+esc(t("ui.by_model"))+'</h2>'+table(d.by_model)+"</div>";
+    $("#stats").innerHTML = html;
+    $("#tinfo").textContent = t("ui.stats_done");
+  }catch(e){ $("#stats").innerHTML = '<div class="empty">'+esc(t("ui.stats_failed", { msg: e.message }))+"</div>"; }
+}
+const card = (v,l) => '<div class="card"><b>'+v+"</b><span>"+l+"</span></div>";
+function bars(rows, field, label){
+  if (!rows.length) return '<div class="empty">'+esc(t("ui.no_data"))+"</div>";
+  const max = Math.max(...rows.map(r => r[field]||0), 1);
+  return '<div class="bars">'+rows.map(r =>
+    '<div class="bar-row"><span class="tiny">'+esc(r.key.slice(5))+"</span>"+
+    '<span class="bar-track"><span class="bar-fill" style="width:'+Math.max(2,(r[field]/max*100))+'%"></span></span>'+
+    '<span class="bar-val">'+esc(label(r))+"</span></div>").join("")+"</div>";
+}
+function table(rows){
+  if (!rows.length) return '<div class="empty">'+esc(t("ui.no_data"))+"</div>";
+  return "<table><thead><tr><th>"+esc(t("ui.name"))+"</th><th class='n'>"+esc(t("ui.sessions"))+"</th><th class='n'>"+esc(t("ui.cost"))+"</th><th class='n'>Token</th></tr></thead><tbody>"+
+    rows.map(r => "<tr><td>"+esc(shortDir(r.key))+"</td><td class='n'>"+r.sessions+"</td><td class='n'>$"+r.cost.toFixed(2)+
+      "</td><td class='n'>"+fmtNum(r.tokens)+"</td></tr>").join("")+"</tbody></table>";
+}
+
+/* ---------- 导出 ---------- */
+function updateExportWarn(){
+  const el = $("#ewarn");
+  if (!el) return;
+  const parts = (state.counts||{}).parts || 0;
+  const big = $("#escope").value === "cur" && parts > 3000 && !$("#efrom").value && !$("#eto").value;
+  el.innerHTML = big
+    ? t("ui.export_big", { parts: fmtNum(parts) })
+    : esc(t("ui.export_hint"));
+}
+
+function doExport(){
+  const p = new URLSearchParams();
+  const fmt = $("#efmt").value;
+  p.set("format", fmt);
+  const scope = $("#escope").value;
+  if (scope === "cur"){
+    if (!state.sid){ alert(t("ui.export_need_session")); return; }
+    p.set("session_id", state.sid);
+  }
+  const f = $("#efrom").value, to = $("#eto").value;
+  if (f) p.set("from", d2ms(f)); if (to) p.set("to", d2ms(to, true));
+  const inc = ["text"];
+  if ($("#ethink").checked) inc.push("reasoning");
+  if ($("#etool").checked) inc.push("tool");
+  inc.push("file","marker");
+  p.set("include", inc.join(","));
+  $("#einfo").textContent = t("ui.export_generating");
+  const a = document.createElement("a");
+  a.href = "/api/export?"+p.toString();
+  a.download = "";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>{ $("#einfo").textContent = t("ui.export_triggered"); }, 600);
+}
+
+/* ---------- 弹窗 ---------- */
+function modal(title, bodyHtml){
+  $("#mtitle").textContent = title;
+  $("#mbody").innerHTML = bodyHtml;
+  $("#modal").classList.add("on");
+}
+$("#mclose").onclick = () => $("#modal").classList.remove("on");
+$("#modal").onclick = e => { if (e.target.id === "modal") $("#modal").classList.remove("on"); };
+
+document.addEventListener("click", async e => {
+  const full = e.target.closest("button[data-full]");
+  if (full){
+    modal(t("ui.full_output"), '<div class="empty"><span class="spin"></span> '+esc(t("ui.reading"))+"</div>");
+    try{
+      const j = await api("/api/tool-output?part_id="+encodeURIComponent(full.dataset.full));
+      modal(t("ui.full_output_n", { n: fmtNum(j.text.length) }), "<pre>"+esc(j.text)+"</pre>");
+    }catch(err){ modal(t("ui.full_output"), '<div class="empty">'+esc(t("ui.read_failed", { msg: err.message }))+"</div>"); }
+    return;
+  }
+  const img = e.target.closest("img[data-img]");
+  if (img){ modal(t("ui.attachment_preview"), '<img src="'+img.src+'">'); }
+});
+
+/* ---------- 交互绑定 ---------- */
+function switchPane(name){
+  $$(".tab").forEach(x => x.classList.toggle("on", x.dataset.pane === name));
+  $$(".pane").forEach(x => x.classList.toggle("on", x.id === "pane-"+name));
+  if (name === "export") updateExportWarn();
+  if (name === "info") renderInfo();
+}
+$$(".tab").forEach(x => x.onclick = () => switchPane(x.dataset.pane));
+
+$("#theme").onclick = () => {
+  const cur = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = cur;
+  $("#theme").textContent = cur === "dark" ? t("ui.theme_light") : t("ui.theme_dark");
+  try{ localStorage.setItem("se-theme", cur); }catch(e){}
+};
+(function initTheme(){
+  let th = "light";
+  try{ th = localStorage.getItem("se-theme") || "light"; }catch(e){}
+  document.documentElement.dataset.theme = th;
+  $("#theme").textContent = th === "dark" ? t("ui.theme_light") : t("ui.theme_dark");
+})();
+
+$("#refresh").onclick = loadSessions;
+$("#logout").onclick = () => { location.href = "/logout"; };
+$("#clear").onclick = () => { $("#sq").value=""; $("#sfrom").value=""; $("#sto").value="";
+  $("#ssort").value="desc"; $("#smain").value="0"; $("#sdir").value=""; loadSessions(); };
+$("#sq").oninput = debounce(loadSessions, 320);
+["sfrom","sto","ssort","smain","sdir"].forEach(id => $("#"+id).onchange = loadSessions);
+
+$("#ord").onclick = () => {
+  state.order = state.order === "desc" ? "asc" : "desc";
+  $("#ord").textContent = state.order === "desc" ? t("ui.newest_top") : t("ui.oldest_top");
+  renderTranscript(true);
+};
+$("#askonly").onclick = async () => {
+  state.askOnly = !state.askOnly;
+  $("#askonly").classList.toggle("on", state.askOnly);
+  state.msgs = []; state.cursor = null; state.hasMore = false;
+  await loadMore(true);
+};
+$("#exp").onclick = () => {
+  state.expanded = !state.expanded;
+  $("#exp").textContent = state.expanded ? t("ui.collapse_all") : t("ui.expand_all");
+  $$("#transcript details").forEach(d => d.open = state.expanded);
+};
+
+$("#fq").oninput = debounce(() => applySearch(true), 200);
+$("#fq").onkeydown = e => {
+  if (e.key === "Enter"){ e.preventDefault(); state.mi += e.shiftKey ? -1 : 1; focusMark(); }
+  else if (e.key === "Escape"){ $("#fq").value = ""; applySearch(true); }
+};
+$("#fnext").onclick = () => { state.mi++; focusMark(); };
+$("#fprev").onclick = () => { state.mi--; focusMark(); };
+$("#more").onclick = () => loadMore(false);
+
+$("#transcript").addEventListener("scroll", debounce(e => {
+  const el = e.target;
+  if (state.loading || !state.hasMore) return;
+  if (state.order === "desc" && el.scrollTop + el.clientHeight >= el.scrollHeight - 240) loadMore(false);
+}, 180));
+
+$("#gsearch").onclick = doSearch;
+$("#gq").onkeydown = e => { if (e.key === "Enter") doSearch(); };
+$("#tapply").onclick = doStats;
+$("#tall").onclick = () => { $("#tfrom").value=""; $("#tto").value=""; doStats(); };
+$("#edo").onclick = doExport;
+$("#irefresh").onclick = async () => {
+  if (!state.sid){ $("#iinfo").textContent = t("ui.no_session_open"); return; }
+  $("#iinfo").textContent = t("ui.refreshing");
+  try{
+    const j = await api("/api/session?id="+encodeURIComponent(state.sid));
+    state.meta = j.session; state.counts = j.counts;
+    renderHeader(); renderInfo();
+  }catch(e){ $("#iinfo").textContent = t("ui.refresh_failed", { msg: e.message }); }
+};
+["escope","efrom","eto"].forEach(id => $("#"+id).onchange = updateExportWarn);
+
+/* 搜索结果条数下拉的文案带数量，运行时填充 */
+$$("#glimit option").forEach(o => o.textContent = t("ui.limit_n", { n: o.value }));
+
+/* ---------- 启动 ---------- */
+(async () => {
+  try{
+    const h = await api("/api/health");
+    $("#idxinfo").textContent = t("ui.index_info", {
+      sessions: h.sessions, parts: fmtNum(h.messages), indexed: fmtNum(h.index.indexed)
+    }) + (h.token_required ? t("ui.token_enabled") : "");
+    if (h.token_required) $("#logout").style.display = "";
+    $("#hint").textContent = "v"+h.version;
+  }catch(e){ $("#idxinfo").textContent = t("ui.service_not_ready", { msg: e.message }); }
+  await loadSessions();
+  const b = new URLSearchParams(location.search);
+  const id = b.get("id");
+  const q = b.get("q");
+  const pane = b.get("pane");
+  if (id) await openSession(id, b.get("t") ? +b.get("t") : null);
+  if (b.get("ask") === "1" && state.meta){
+    state.askOnly = true;
+    $("#askonly").classList.add("on");
+    state.msgs = []; state.cursor = null; state.hasMore = false;
+    await loadMore(true);
+  }
+  if (pane) switchPane(pane);
+  if (pane === "stats") doStats();
+  if (q && pane === "search"){ $("#gq").value = q; doSearch(); }
+  else if (q){ $("#fq").value = q; applySearch(true); }
+})();
+</script>
+</body>
+</html>
