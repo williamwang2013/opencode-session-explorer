@@ -456,7 +456,8 @@ function renderInfo(){
   let html = "";
 
   html += '<div class="cards">'+
-    card(fmtNum(c.messages), t("ui.card_messages"))+card(fmtNum(c.parts), t("ui.card_parts"))+
+    card(fmtNum(c.messages), t("ui.card_messages"))+
+    (c.parts ? card(fmtNum(c.parts), t("ui.card_parts")) : "")+
     card(fmtCost(s.cost)||"$0.00", t("ui.card_cost"))+
     (kids.length ? card(fmtCost(cs.cost)||"$0.00", t("ui.card_child_cost"))+card(fmtCost((s.cost||0)+(cs.cost||0))||"$0.00", t("ui.card_total_cost")) : "")+
     "</div>";
